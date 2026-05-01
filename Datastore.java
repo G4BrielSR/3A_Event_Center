@@ -30,7 +30,6 @@ public class Datastore {
                 CREATE TABLE IF NOT EXIST events (
                 id              INT PRIMARY KEY AUTO_INCREMENT
                 nom             VARCHAR(30)
-                duree           TIME NOT NULL
                 date_heure      DATETIME NOT NULL
                 description     TEXT
                 lieu            VARCHAR(50) NOT NULL
@@ -61,11 +60,14 @@ public class Datastore {
                 Map<String, Object> singevnt = new HashMap <>();
                 singevnt.put("id", retour.getInt("id"));
                 singevnt.put("nom", retour.getString("nom"));
-                singevnt.put("duree", retour.getTime("duree"));
+                //singevnt.put("duree", retour.getTime("duree"));
                 singevnt.put("date_heure", retour.getDate("date_heure"));
                 singevnt.put("description", retour.getString("description"));
                 singevnt.put("lieu", retour.getString("lieu"));
                 singevnt.put("prix", retour.getDouble("prix"));
+                singevnt.put("capacite", retour.getInt("capacite"));
+                singevnt.put("placeRestantes", retour.getInt("placeRestantes"));
+
 
                 evnts.add(singevnt);
             }
@@ -79,6 +81,6 @@ public class Datastore {
     }
 
     Public int addEvent(String title,) {
-        
+
     }
 }
