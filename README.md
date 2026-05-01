@@ -1,2 +1,3 @@
-# 3A_Event_Center
-Projet_3A_app
+# 3A_Event_Center_BDD
+
+Using SQLite and leaflet
