@@ -1,0 +1,5 @@
+{
+    "java.project.referencedLibraries": [
+        "C:/javaFX17/lib/**/*.jar"
+    ]
+}
