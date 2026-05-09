@@ -44,13 +44,13 @@ public class Datastore {
                 CREATE TABLE IF NOT EXISTS events (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
                 nom             VARCHAR(30),
+                capacite        INT NULL,
                 date_heure      DATETIME NOT NULL,
                 description     TEXT,
                 lieu            VARCHAR(50) NOT NULL,
-                prix            DOUBLE NOT NULL DEFAULT 0,
-                capacite        INT NULL,
-                placeRestantes  INT NOT NULL
- 
+                TicketRestants  INT NOT NULL,
+                prix            DOUBLE NOT NULL DEFAULT 0
+                
                 )
                 """;
 
@@ -73,12 +73,14 @@ public class Datastore {
                 Map<String, Object> singevnt = new HashMap <>();
                 singevnt.put("id", retour.getInt("id"));
                 singevnt.put("nom", retour.getString("nom"));
+                singevnt.put("capacite", retour.getInt("capacite"));
                 //singevnt.put("duree", retour.getTime("duree"));
                 singevnt.put("date_heure", LocalDate.parse(retour.getString("date_heure"), FORMAT_DATE));
                 singevnt.put("description", retour.getString("description"));
                 singevnt.put("lieu", retour.getString("lieu"));
+                singevnt.put("TicketRestants", retour.getInt("TicketRestants"));
                 singevnt.put("prix", retour.getDouble("prix"));
-                singevnt.put("capacite", retour.getInt("capacite"));
+                
                 
 
                 evnts.add(singevnt);
@@ -92,20 +94,20 @@ public class Datastore {
         return evnts;
     }
 
-    public int addEvent(String nom, LocalDate dateh, String description, String lieu, double prix, int capacite, int placeRestantes) {
+    public int addEvent(String nom, int capacite, LocalDate dateh, String description, String lieu, int placeRestantes, double prix) {
         try {
             PreparedStatement msg_ajout = connection.prepareStatement(
-                "INSERT INTO events (nom, date_heure, description, lieu, prix, capacite, placeRestantes)" +
+                "INSERT INTO events (nom, capacite, date_heure, description, lieu, TicketRestants, prix)" +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)"
             );
 
             msg_ajout.setString(1, nom);
-            msg_ajout.setString(2, dateh.format(FORMAT_DATE));
-            msg_ajout.setString(3, description);
-            msg_ajout.setString(4, lieu);
-            msg_ajout.setDouble(5, prix);
-            msg_ajout.setInt(6, capacite);
-            msg_ajout.setInt(7, placeRestantes);
+            msg_ajout.setInt(2, capacite);
+            msg_ajout.setString(3, dateh.format(FORMAT_DATE));
+            msg_ajout.setString(4, description);
+            msg_ajout.setString(5, lieu);
+            msg_ajout.setInt(6, placeRestantes);
+            msg_ajout.setDouble(7, prix);
 
             msg_ajout.executeUpdate();
 
@@ -123,19 +125,19 @@ public class Datastore {
         return -1;
     }
     
-    public boolean updateEvent(int id, String nom, LocalDate dateh, String description, String lieu, double prix, int capacite, int placeRestantes) {
+    public boolean updateEvent(int id, String nom, int capacite, LocalDate dateh, String description, String lieu, int placeRestantes, double prix) {
         try {
             PreparedStatement maj = connection.prepareStatement(
-                "UPDATE events SET nom=?, date_heure=?, description=?, lieu=?, prix=?, capacite=?, placeRestantes=?" + "WHERE id=?"
+                "UPDATE events SET nom=?, capacite=?, date_heure=?, description=?, lieu=?, TicketRestants=?, prix=?" + "WHERE id=?"
             );
 
             maj.setString(1, nom);
-            maj.setString(2, dateh.format(FORMAT_DATE));
-            maj.setString(3, description);
-            maj.setString(4, lieu);
-            maj.setDouble(5, prix);
-            maj.setInt(6, capacite);
-            maj.setInt(7, placeRestantes);
+            maj.setInt(2, capacite);
+            maj.setString(3, dateh.format(FORMAT_DATE));
+            maj.setString(4, description);
+            maj.setString(5, lieu);
+            maj.setInt(6, placeRestantes);
+            maj.setDouble(7, prix);
             maj.setInt(8, id);
 
             int col_modifiees = maj.executeUpdate();
