@@ -39,6 +39,24 @@ public class Datastore {
         return instance;
     }
 
+
+    private void createCategoriesTable() {
+
+        String sqlCategories = """
+                CREATE TABLE IF NOT EXISTS categories (
+                id              INTERGER PRIMARY KEY AUTOINCREMENT,
+                typeCat         VARCHAR(30)
+                )
+                """;
+        try {
+            Statement msg_connection = connection.createStatement();
+            msg_connection.execute(sqlCategories);
+        } catch (SQLException e) {
+            System.err.println("Erreur init table de catégorie : " + e.getMessage());
+        }
+      
+
+    }
     private void createTable() throws SQLException {
         String sql = """
                 CREATE TABLE IF NOT EXISTS events (
@@ -53,7 +71,8 @@ public class Datastore {
                 
                 )
                 """;
-
+        
+        createCategoriesTable();
         Statement msg_connection = connection.createStatement();
         msg_connection.execute(sql);
         System.out.println("Table prête !");
@@ -177,3 +196,6 @@ public class Datastore {
         }
     }
 }
+
+//Gestion de table utilisateur:
+
