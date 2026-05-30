@@ -1,11 +1,17 @@
-
-import java.time.LocalDate;
-
 public class AppDummy {
     public static void main(String[] args) {
         System.out.println("OK");
         Datastore BDD = Datastore.getInstance();
-        LocalDate FromDate = LocalDate.of(2026, 3, 3);
-        BDD.addEvent("Fête du fromage", FromDate, "Venez passer d'excellents moments en célébrant le fromage", "Rochefort", 57.3, 300, 300);
+        
+        BDD.ajouterEvent(
+            "Fête du fromage", 
+            "Venez passer d'excellents moments en célébrant le fromage", 
+            "Rochefort", 
+            "2026-03-03", 
+            57.3,         
+            300,          
+            1,            
+            "cuisine"     
+        );
     }
 }
