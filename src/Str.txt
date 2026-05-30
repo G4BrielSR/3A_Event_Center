@@ -1,0 +1,13 @@
+          organisateurId  INT,
+                categorieId     INT,
+
+                FOREIGN KEY(organisateurId) REFERENCES user(id)
+                    ON DELETE SET NULL
+                    ON UPDATE CASCADE   
+                FOREIGN KEY(categorieId) REFERENCES categories(id)
+                    ON DELETE SET NULL
+                    ON UPDATE CASCADE
+                )
+
+                singevnt.put("organisateurId", retour.getInt("organisateurId"));
+                singevnt.put("categorieId", retour.getInt("categorieId"));
