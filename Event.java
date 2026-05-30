@@ -80,12 +80,10 @@ public class Event{
         }
     }
      public boolean isFull(){
-        if (ticketsRestants<capacite){
-            return false;
+        if (ticketsRestants==0){
+            return true;
         }
-        return true;
+        return false;
     }
-
-
 
 }
