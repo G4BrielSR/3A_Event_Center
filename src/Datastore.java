@@ -1,34 +1,21 @@
 import java.sql.*;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-//import javax.naming.spi.DirStateFactory;
-//import javax.xml.catalog.Catalog;
-
 
 public class Datastore {
 
     private static Datastore instance;
     private Connection connection;
 
-    private static final DateTimeFormatter FORMAT_DATE = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
-    private Datastore () {
+    private Datastore() {
         try {
-                Class.forName("org.sqlite.jdbc4.JDBC4Connection");
-                connection = DriverManager.getConnection("jdbc:sqlite:events.db");
-                Statement toggleForeign = connection.createStatement();
-                toggleForeign.execute("PRAGMA foreign_keys = ON");
-                System.out.println("BDD Connectée !");
-                createTable();
-
-        } 
-        catch (ClassNotFoundException e) {
-            System.out.println("Driver not found: " + e.getMessage());
-        }
-        catch (SQLException e) {
-                //e.printStackTrace();
-                System.out.println("Erreur connection : " + e.getMessage());
+            Class.forName("org.sqlite.JDBC"); // Fixed driver name
+            connection = DriverManager.getConnection("jdbc:sqlite:events.db");
+            Statement toggleForeign = connection.createStatement();
+            toggleForeign.execute("PRAGMA foreign_keys = ON");
+            System.out.println("BDD Connectée !");
+            createTables();
+        } catch (ClassNotFoundException | SQLException e) {
+            System.out.println("Erreur init BDD : " + e.getMessage());
         }
     }
 
@@ -39,163 +26,122 @@ public class Datastore {
         return instance;
     }
 
-
-    private void createCategoriesTable() {
-
-        String sqlCategories = """
-                CREATE TABLE IF NOT EXISTS categories (
-                id              INTERGER PRIMARY KEY AUTOINCREMENT,
-                typeCat         VARCHAR(30)
-                )
-                """;
-        try {
-            Statement msg_connection = connection.createStatement();
-            msg_connection.execute(sqlCategories);
-        } catch (SQLException e) {
-            System.err.println("Erreur init table de catégorie : " + e.getMessage());
-        }
-      
-
-    }
-    private void createTable() throws SQLException {
-        String sql = """
-                CREATE TABLE IF NOT EXISTS events (
-                id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                nom             VARCHAR(30),
-                capacite        INT NULL,
-                date_heure      DATETIME NOT NULL,
-                description     TEXT,
-                lieu            VARCHAR(50) NOT NULL,
-                TicketRestants  INT NOT NULL,
-                prix            DOUBLE NOT NULL DEFAULT 0
-                
-                )
-                """;
+    private void createTables() throws SQLException {
+        Statement stmt = connection.createStatement();
         
-        createCategoriesTable();
-        Statement msg_connection = connection.createStatement();
-        msg_connection.execute(sql);
-        System.out.println("Table prête !");
+       
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nom VARCHAR(50),
+                prenom VARCHAR(50),
+                email VARCHAR(100) UNIQUE,
+                role VARCHAR(20),
+                password VARCHAR(50)
+            )
+        """);
+
+        
+        stmt.execute("INSERT OR IGNORE INTO users (id, nom, prenom, email, role, password) VALUES (1, 'Admin', 'Jean', 'admin@event.com', 'organisateur', '1234')");
+        stmt.execute("INSERT OR IGNORE INTO users (id, nom, prenom, email, role, password) VALUES (2, 'Doe', 'John', 'jeune@event.com', 'jeune', '1234')");
+
+        
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nom VARCHAR(100),
+                description TEXT,
+                lieu VARCHAR(100),
+                date_heure VARCHAR(50),
+                prix DOUBLE,
+                capacite INT,
+                placeRestantes INT,
+                organisateurId INT,
+                categorie VARCHAR(50),
+                FOREIGN KEY(organisateurId) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """);
+        System.out.println("Tables prêtes !");
     }
 
+ 
+    public User connexion(String email, String password) {
+        try {
+            PreparedStatement req = connection.prepareStatement(
+                "SELECT * FROM users WHERE email = ? AND password = ?"
+            );
+            req.setString(1, email);
+            req.setString(2, password);
+            ResultSet rs = req.executeQuery();
+
+            if (rs.next()) {
+                // Returns Islem's User Object!
+                return new User(
+                    rs.getInt("id"), rs.getString("nom"), rs.getString("prenom"),
+                    rs.getString("email"), rs.getString("role"), rs.getString("password")
+                );
+            }
+        } catch (SQLException e) {
+            System.out.println("Erreur de connexion : " + e.getMessage());
+        }
+        return null;
+    }
+
+    public boolean ajouterEvent(String titre, String description, String lieu, String date, double prix, int capacite, int organisateurId, String categorie) {
+        try {
+            PreparedStatement req = connection.prepareStatement(
+                "INSERT INTO events (nom, description, lieu, date_heure, prix, capacite, placeRestantes, organisateurId, categorie) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            );
+            req.setString(1, titre);
+            req.setString(2, description);
+            req.setString(3, lieu);
+            req.setString(4, date); // Stored as String to avoid parsing crashes with Eya's datetime format
+            req.setDouble(5, prix);
+            req.setInt(6, capacite);
+            req.setInt(7, capacite); // Initially, places restantes = capacite
+            req.setInt(8, organisateurId);
+            req.setString(9, categorie);
+
+            return req.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Erreur d'ajout : " + e.getMessage());
+            return false;
+        }
+    }
+
+    // --- Fixed for JeuneFrame.java & OrganisateurFrame.java ---
     public List<Map<String, Object>> getEvents() {
         List<Map<String, Object>> evnts = new ArrayList<>();
-        
         try {
-            PreparedStatement requete = connection.prepareStatement(
-                "SELECT * FROM events"
-            );
+            Statement req = connection.createStatement();
+            ResultSet rs = req.executeQuery("SELECT * FROM events");
 
-            ResultSet retour = requete.executeQuery();
-
-            while(retour.next()){
-                Map<String, Object> singevnt = new HashMap <>();
-                singevnt.put("id", retour.getInt("id"));
-                singevnt.put("nom", retour.getString("nom"));
-                singevnt.put("capacite", retour.getInt("capacite"));
-                //singevnt.put("duree", retour.getTime("duree"));
-                singevnt.put("date_heure", LocalDate.parse(retour.getString("date_heure"), FORMAT_DATE));
-                singevnt.put("description", retour.getString("description"));
-                singevnt.put("lieu", retour.getString("lieu"));
-                singevnt.put("TicketRestants", retour.getInt("TicketRestants"));
-                singevnt.put("prix", retour.getDouble("prix"));
+            while(rs.next()){
+                Map<String, Object> ev = new HashMap<>();
+                // Keys must exactly match what Eya typed in her JavaFX listeners
+                ev.put("id", rs.getInt("id"));
+                ev.put("nom", rs.getString("nom"));
+                ev.put("description", rs.getString("description"));
+                ev.put("lieu", rs.getString("lieu"));
+                ev.put("date_heure", rs.getString("date_heure"));
+                ev.put("prix", rs.getDouble("prix"));
+                ev.put("placeRestantes", rs.getInt("placeRestantes")); // Eya used placeRestantes, Gabriel used TicketRestants
+                ev.put("organisateurId", rs.getInt("organisateurId"));
+                ev.put("categorie", rs.getString("categorie"));
                 
-                
-
-                evnts.add(singevnt);
+                evnts.add(ev);
             }
+        } catch(SQLException e){
+            System.out.println("Erreur de lecture Table : " + e.getMessage());
         }
-
-        catch(SQLException e){
-            System.out.println("Erreur de lecture Table" + e.getMessage());
-        }
-
         return evnts;
-    }
-
-    public int addEvent(String nom, int capacite, LocalDate dateh, String description, String lieu, int placeRestantes, double prix) {
-        try {
-            PreparedStatement msg_ajout = connection.prepareStatement(
-                "INSERT INTO events (nom, capacite, date_heure, description, lieu, TicketRestants, prix)" +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)"
-            );
-
-            msg_ajout.setString(1, nom);
-            msg_ajout.setInt(2, capacite);
-            msg_ajout.setString(3, dateh.format(FORMAT_DATE));
-            msg_ajout.setString(4, description);
-            msg_ajout.setString(5, lieu);
-            msg_ajout.setInt(6, placeRestantes);
-            msg_ajout.setDouble(7, prix);
-
-            msg_ajout.executeUpdate();
-
-            ResultSet cle = msg_ajout.getGeneratedKeys();
-            if (cle.next()) {
-                int proch_id = cle.getInt(1);
-                System.out.println("Évènement crée avec l'id : " + proch_id);
-                return proch_id;
-            }
-        }
-        catch (SQLException e) {
-            System.out.println("Erreur d'ajout : " + e.getMessage());
-        }
-
-        return -1;
-    }
-    
-    public boolean updateEvent(int id, String nom, int capacite, LocalDate dateh, String description, String lieu, int placeRestantes, double prix) {
-        try {
-            PreparedStatement maj = connection.prepareStatement(
-                "UPDATE events SET nom=?, capacite=?, date_heure=?, description=?, lieu=?, TicketRestants=?, prix=?" + "WHERE id=?"
-            );
-
-            maj.setString(1, nom);
-            maj.setInt(2, capacite);
-            maj.setString(3, dateh.format(FORMAT_DATE));
-            maj.setString(4, description);
-            maj.setString(5, lieu);
-            maj.setInt(6, placeRestantes);
-            maj.setDouble(7, prix);
-            maj.setInt(8, id);
-
-            int col_modifiees = maj.executeUpdate();
-            return col_modifiees > 0;
-
-        }
-        catch (SQLException e) {
-            System.out.println("Erreur de mise à jour" + e.getMessage());
-            return false;
-        }
-    }
-
-    public boolean supprEvent(int id) {
-        try {
-            PreparedStatement suppr = connection.prepareStatement(
-                "DELETE FROM events WHERE id=?"
-            );
-            suppr.setInt(1, id);
-
-            int col_modifiees = suppr.executeUpdate();
-            return col_modifiees > 0;
-        }
-        catch(SQLException e) {
-            System.out.println("Erreur de suppression " + e.getMessage());
-            return false;
-        }
     }
 
     public void closeConnection() {
         try {
-            if (connection != null) 
-                connection.close();
-            System.out.println("Connection BDD terminée avec succès");
-        } 
-        catch (SQLException e) {
-            System.out.println("Erreur lors de la tentative de fermeture" + e.getMessage());
+            if (connection != null) connection.close();
+        } catch (SQLException e) {
+            System.out.println("Erreur fermeture : " + e.getMessage());
         }
     }
 }
-
-//Gestion de table utilisateur:
-
