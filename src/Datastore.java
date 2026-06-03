@@ -1,19 +1,12 @@
 import java.sql.*;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-//import javax.naming.spi.DirStateFactory;
-//import javax.xml.catalog.Catalog;
-
 
 public class Datastore {
 
     private static Datastore instance;
     private Connection connection;
 
-    private static final DateTimeFormatter FORMAT_DATE = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
-    private Datastore () {
+    private Datastore() {
         try {
                 Class.forName("org.sqlite.jdbc4.JDBC4Connection");
                 connection = DriverManager.getConnection("jdbc:sqlite:events.db");
@@ -89,9 +82,8 @@ public class Datastore {
         System.out.println("Table prête !");
     }
 
-    public List<Map<String, Object>> getEvents() {
-        List<Map<String, Object>> evnts = new ArrayList<>();
-        
+ 
+    public User connexion(String email, String password) {
         try {
             PreparedStatement requete = connection.prepareStatement(
                 "SELECT * FROM events"
@@ -115,13 +107,10 @@ public class Datastore {
 
                 evnts.add(singevnt);
             }
+        } catch (SQLException e) {
+            System.out.println("Erreur de connexion : " + e.getMessage());
         }
-
-        catch(SQLException e){
-            System.out.println("Erreur de lecture Table" + e.getMessage());
-        }
-
-        return evnts;
+        return null;
     }
 
     public int addEvent(String nom, int capacite, LocalDate dateh, String description, String lieu, int placeRestantes, double prix) { //int organId, int categId) {
@@ -185,30 +174,39 @@ public class Datastore {
         }
     }
 
-    public boolean supprEvent(int id) {
+    // --- Fixed for JeuneFrame.java & OrganisateurFrame.java ---
+    public List<Map<String, Object>> getEvents() {
+        List<Map<String, Object>> evnts = new ArrayList<>();
         try {
-            PreparedStatement suppr = connection.prepareStatement(
-                "DELETE FROM events WHERE id=?"
-            );
-            suppr.setInt(1, id);
+            Statement req = connection.createStatement();
+            ResultSet rs = req.executeQuery("SELECT * FROM events");
 
-            int col_modifiees = suppr.executeUpdate();
-            return col_modifiees > 0;
+            while(rs.next()){
+                Map<String, Object> ev = new HashMap<>();
+                // Keys must exactly match what Eya typed in her JavaFX listeners
+                ev.put("id", rs.getInt("id"));
+                ev.put("nom", rs.getString("nom"));
+                ev.put("description", rs.getString("description"));
+                ev.put("lieu", rs.getString("lieu"));
+                ev.put("date_heure", rs.getString("date_heure"));
+                ev.put("prix", rs.getDouble("prix"));
+                ev.put("placeRestantes", rs.getInt("placeRestantes")); // Eya used placeRestantes, Gabriel used TicketRestants
+                ev.put("organisateurId", rs.getInt("organisateurId"));
+                ev.put("categorie", rs.getString("categorie"));
+                
+                evnts.add(ev);
+            }
+        } catch(SQLException e){
+            System.out.println("Erreur de lecture Table : " + e.getMessage());
         }
-        catch(SQLException e) {
-            System.out.println("Erreur de suppression " + e.getMessage());
-            return false;
-        }
+        return evnts;
     }
 
     public void closeConnection() {
         try {
-            if (connection != null) 
-                connection.close();
-            System.out.println("Connection BDD terminée avec succès");
-        } 
-        catch (SQLException e) {
-            System.out.println("Erreur lors de la tentative de fermeture" + e.getMessage());
+            if (connection != null) connection.close();
+        } catch (SQLException e) {
+            System.out.println("Erreur fermeture : " + e.getMessage());
         }
     }
 

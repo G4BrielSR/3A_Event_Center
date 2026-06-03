@@ -1,6 +1,3 @@
-
-import java.time.LocalDate;
-
 public class AppDummy {
     public static void main(String[] args) {
         System.out.println("OK");
